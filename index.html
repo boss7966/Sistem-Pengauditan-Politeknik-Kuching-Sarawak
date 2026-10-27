@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Pemantauan Audit Dalaman</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f4f8;
+      color: #1f2328;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #1e3a5f;
+      color: #ffffff;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
+    header p  { font-size: 13px; color: #a8c4e0; margin-top: 2px; }
+    .badge-sesi {
+      background: #2d5f8a;
+      color: #cde4f5;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+
+    /* ── MAIN WRAPPER ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 22px 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border-left: 5px solid transparent;
+    }
+    .kpi-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .kpi-info { flex: 1; }
+    .kpi-label { font-size: 12px; color: #57606a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 36px; font-weight: 700; line-height: 1.1; }
+
+    .kpi-card.merah-tua  { border-left-color: #dc2626; }
+    .kpi-card.oren       { border-left-color: #f59e0b; }
+    .kpi-card.teal       { border-left-color: #0d9488; }
+    .kpi-card.merah-tua .kpi-icon { background: #fef2f2; }
+    .kpi-card.oren      .kpi-icon { background: #fffbeb; }
+    .kpi-card.teal      .kpi-icon { background: #f0fdfa; }
+    .kpi-card.merah-tua .kpi-value { color: #dc2626; }
+    .kpi-card.oren      .kpi-value { color: #b45309; }
+    .kpi-card.teal      .kpi-value { color: #0f766e; }
+
+    /* ── SECTION HEADING ── */
+    .seksyen-tajuk {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e3a5f;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #dbeafe;
+    }
+
+    /* ── TAB TAHUN ── */
+    .tab-tahun {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 7px 18px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      background: #f1f5f9;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { background: #e2e8f0; }
+    .tab-btn.tab-aktif {
+      background: #1e3a5f;
+      color: #ffffff;
+      border-color: #1e3a5f;
+    }
+
+    /* ── GRAF ── */
+    .graf-wrapper {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+    .graf-dual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 780px) {
+      .graf-dual { grid-template-columns: 1fr; }
+    }
+    .graf-wrapper.dalam-dual { margin-bottom: 0; }
+    .graf-container-audit {
+      position: relative;
+      height: 300px;
+    }
+
+    /* ── JADUAL ── */
+    .jadual-wrapper {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: #1e3a5f;
+      color: #ffffff;
+      padding: 10px 12px;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: #eff6ff; }
+    tbody td {
+      padding: 9px 12px;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+      color: #374151;
+    }
+    .tiada-rekod {
+      text-align: center; padding: 24px; color: #57606a; font-style: italic;
+    }
+
+    /* ── BADGE DAPATAN ── */
+    .badge-major {
+      display: inline-block;
+      background: #fee2e2; color: #991b1b;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 700;
+      min-width: 28px; text-align: center;
+    }
+    .badge-minor {
+      display: inline-block;
+      background: #fef3c7; color: #92400e;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 700;
+      min-width: 28px; text-align: center;
+    }
+    .badge-ofi {
+      display: inline-block;
+      background: #dbeafe; color: #1e40af;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 700;
+      min-width: 28px; text-align: center;
+    }
+    .badge-zero {
+      display: inline-block;
+      background: #f3f4f6; color: #9ca3af;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 600;
+      min-width: 28px; text-align: center;
+    }
+
+    /* ── BADGE PTK ── */
+    .badge-ptk-lengkap {
+      background: #dcfce7; color: #166534;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-ptk-sederhana {
+      background: #fef9c3; color: #854d0e;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-ptk-rendah {
+      background: #fee2e2; color: #991b1b;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🔍 Dashboard Pemantauan Audit Dalaman</h1>
+    <p>EKSA &nbsp;·&nbsp; SPB &nbsp;·&nbsp; PENA &nbsp;·&nbsp; Kualiti &nbsp;·&nbsp; OSH</p>
+  </div>
+  <span class="badge-sesi">2022 – 2024</span>
+</header>
+
+<main>
+
+  <!-- Tab navigasi tahun -->
+  <div class="tab-tahun">
+    <button class="tab-btn tab-aktif" data-tahun="semua">Semua Tahun</button>
+    <button class="tab-btn" data-tahun="2022">2022</button>
+    <button class="tab-btn" data-tahun="2023">2023</button>
+    <button class="tab-btn" data-tahun="2024">2024</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card merah-tua">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-info">
+        <div class="kpi-label">Jumlah Dapatan Major</div>
+        <div class="kpi-value" id="kpi-major">0</div>
+      </div>
+    </div>
+    <div class="kpi-card oren">
+      <div class="kpi-icon">📌</div>
+      <div class="kpi-info">
+        <div class="kpi-label">Jumlah Dapatan Minor</div>
+        <div class="kpi-value" id="kpi-minor">0</div>
+      </div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-icon">💡</div>
+      <div class="kpi-info">
+        <div class="kpi-label">Jumlah OFI</div>
+        <div class="kpi-value" id="kpi-ofi">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dua Graf -->
+  <div class="graf-dual">
+    <div class="graf-wrapper dalam-dual">
+      <div class="seksyen-tajuk">📈 Trend Dapatan Mengikut Unit (2022–2024)</div>
+      <div class="graf-container-audit">
+        <canvas id="grafTrendDapatan"></canvas>
+      </div>
+    </div>
+    <div class="graf-wrapper dalam-dual">
+      <div class="seksyen-tajuk">📊 Komposisi Dapatan Per Unit</div>
+      <div class="graf-container-audit">
+        <canvas id="grafDapatanUnit"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jadual Hasil Audit -->
+  <div class="jadual-wrapper">
+    <div class="seksyen-tajuk">📋 Jadual Hasil Pelaksanaan Audit</div>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th style="text-align:left">Unit</th>
+          <th>Tahun</th>
+          <th>Tarikh Audit</th>
+          <th style="text-align:left">Juruaudit</th>
+          <th>Major</th>
+          <th>Minor</th>
+          <th>OFI</th>
+          <th>PTK</th>
+          <th>Status PTK</th>
+        </tr>
+      </thead>
+      <tbody id="isi-audit"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>Made with IBM Bob</footer>
+
+<script>
+  // ══════════════════════════════════════════
+  //  DATA STATIK — AUDIT DALAMAN
+  // ══════════════════════════════════════════
+  const unitAudit  = ['EKSA', 'SPB', 'PENA', 'Kualiti', 'OSH'];
+  const tahunAudit = [2022, 2023, 2024];
+
+  const dataAudit = [
+    {
+      nama: 'EKSA',
+      rekod: [
+        { tahun: 2022, tarikh: '14/03/2022', juruaudit: 'Mohd Azlan bin Hamid',     major: 1, minor: 2, ofi: 3, ptkSelesai: 3,  ptkJumlah: 6  },
+        { tahun: 2023, tarikh: '08/03/2023', juruaudit: 'Nurul Ain binti Zulkifli', major: 0, minor: 3, ofi: 2, ptkSelesai: 5,  ptkJumlah: 5  },
+        { tahun: 2024, tarikh: '12/03/2024', juruaudit: 'Hafizudin bin Rashid',     major: 0, minor: 1, ofi: 2, ptkSelesai: 3,  ptkJumlah: 3  },
+      ]
+    },
+    {
+      nama: 'SPB',
+      rekod: [
+        { tahun: 2022, tarikh: '16/03/2022', juruaudit: 'Siti Hajar binti Kamal',   major: 2, minor: 3, ofi: 1, ptkSelesai: 4,  ptkJumlah: 8  },
+        { tahun: 2023, tarikh: '14/03/2023', juruaudit: 'Farid Asyraf bin Noh',     major: 1, minor: 2, ofi: 3, ptkSelesai: 6,  ptkJumlah: 6  },
+        { tahun: 2024, tarikh: '19/03/2024', juruaudit: 'Rosnani binti Daud',       major: 0, minor: 2, ofi: 1, ptkSelesai: 2,  ptkJumlah: 3  },
+      ]
+    },
+    {
+      nama: 'PENA',
+      rekod: [
+        { tahun: 2022, tarikh: '21/03/2022', juruaudit: 'Ahmad Tarmizi bin Ismail', major: 0, minor: 1, ofi: 4, ptkSelesai: 5,  ptkJumlah: 5  },
+        { tahun: 2023, tarikh: '20/03/2023', juruaudit: 'Zainab binti Othman',      major: 1, minor: 2, ofi: 2, ptkSelesai: 3,  ptkJumlah: 5  },
+        { tahun: 2024, tarikh: '25/03/2024', juruaudit: 'Khairul Nizam bin Aziz',   major: 0, minor: 1, ofi: 1, ptkSelesai: 2,  ptkJumlah: 2  },
+      ]
+    },
+    {
+      nama: 'Kualiti',
+      rekod: [
+        { tahun: 2022, tarikh: '23/03/2022', juruaudit: 'Noraziah binti Mansor',    major: 0, minor: 2, ofi: 2, ptkSelesai: 4,  ptkJumlah: 4  },
+        { tahun: 2023, tarikh: '22/03/2023', juruaudit: 'Amirul Hakim bin Salleh',  major: 0, minor: 1, ofi: 3, ptkSelesai: 4,  ptkJumlah: 4  },
+        { tahun: 2024, tarikh: '27/03/2024', juruaudit: 'Nurliyana binti Fauzi',    major: 0, minor: 0, ofi: 2, ptkSelesai: 2,  ptkJumlah: 2  },
+      ]
+    },
+    {
+      nama: 'OSH',
+      rekod: [
+        { tahun: 2022, tarikh: '28/03/2022', juruaudit: 'Razif Haikal bin Zainol',  major: 2, minor: 4, ofi: 2, ptkSelesai: 5,  ptkJumlah: 10 },
+        { tahun: 2023, tarikh: '27/03/2023', juruaudit: 'Liyana binti Mohd Noor',   major: 1, minor: 3, ofi: 2, ptkSelesai: 6,  ptkJumlah: 6  },
+        { tahun: 2024, tarikh: '02/04/2024', juruaudit: 'Faizal Amin bin Ghazali',  major: 0, minor: 2, ofi: 1, ptkSelesai: 3,  ptkJumlah: 3  },
+      ]
+    },
+  ];
+
+  // ══════════════════════════════════════════
+  //  KPI AUDIT
+  // ══════════════════════════════════════════
+  function kirKPIAudit(tahunTapis) {
+    let totalMajor = 0, totalMinor = 0, totalOfi = 0;
+    dataAudit.forEach(unit => {
+      unit.rekod.forEach(r => {
+        if (tahunTapis === 'semua' || r.tahun === parseInt(tahunTapis)) {
+          totalMajor += r.major;
+          totalMinor += r.minor;
+          totalOfi   += r.ofi;
+        }
+      });
+    });
+    document.getElementById('kpi-major').textContent = totalMajor;
+    document.getElementById('kpi-minor').textContent = totalMinor;
+    document.getElementById('kpi-ofi').textContent   = totalOfi;
+  }
+
+  // ══════════════════════════════════════════
+  //  JADUAL AUDIT
+  // ══════════════════════════════════════════
+  function renderJadualAudit(tahunTapis) {
+    const tbody = document.getElementById('isi-audit');
+    const baris = [];
+    dataAudit.forEach(unit => {
+      unit.rekod.forEach(r => {
+        if (tahunTapis === 'semua' || r.tahun === parseInt(tahunTapis)) {
+          baris.push({ unit: unit.nama, ...r });
+        }
+      });
+    });
+
+    if (baris.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="tiada-rekod">Tiada rekod ditemui.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = baris.map((r, i) => {
+      const badgeMajor = r.major > 0 ? `<span class="badge-major">${r.major}</span>` : `<span class="badge-zero">0</span>`;
+      const badgeMinor = r.minor > 0 ? `<span class="badge-minor">${r.minor}</span>` : `<span class="badge-zero">0</span>`;
+      const badgeOfi   = r.ofi   > 0 ? `<span class="badge-ofi">${r.ofi}</span>`     : `<span class="badge-zero">0</span>`;
+
+      const pctPtk = r.ptkJumlah > 0 ? (r.ptkSelesai / r.ptkJumlah * 100) : 0;
+      const badgePtk = pctPtk >= 100
+        ? `<span class="badge-ptk-lengkap">Lengkap</span>`
+        : pctPtk >= 50
+          ? `<span class="badge-ptk-sederhana">Separuh</span>`
+          : `<span class="badge-ptk-rendah">Rendah</span>`;
+
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td style="text-align:left;font-weight:600">${r.unit}</td>
+          <td>${r.tahun}</td>
+          <td>${r.tarikh}</td>
+          <td style="text-align:left">${r.juruaudit}</td>
+          <td>${badgeMajor}</td>
+          <td>${badgeMinor}</td>
+          <td>${badgeOfi}</td>
+          <td>${r.ptkSelesai}/${r.ptkJumlah}</td>
+          <td>${badgePtk}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════════
+  //  GRAF — TREND & KOMPOSISI
+  // ══════════════════════════════════════════
+  let chartTrend = null;
+  let chartDapatanUnit = null;
+
+  const warnaUnit = [
+    { border: '#dc2626', bg: 'rgba(220,38,38,0.15)'  },  // EKSA
+    { border: '#2563eb', bg: 'rgba(37,99,235,0.15)'  },  // SPB
+    { border: '#16a34a', bg: 'rgba(22,163,74,0.15)'  },  // PENA
+    { border: '#d97706', bg: 'rgba(217,119,6,0.15)'  },  // Kualiti
+    { border: '#7c3aed', bg: 'rgba(124,58,237,0.15)' },  // OSH
+  ];
+
+  function lukisGrafTrend() {
+    if (chartTrend) { chartTrend.destroy(); chartTrend = null; }
+    const datasets = dataAudit.map((unit, i) => ({
+      label: unit.nama,
+      data: tahunAudit.map(t => {
+        const r = unit.rekod.find(x => x.tahun === t);
+        return r ? (r.major + r.minor + r.ofi) : 0;
+      }),
+      borderColor: warnaUnit[i].border,
+      backgroundColor: warnaUnit[i].bg,
+      borderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      fill: false,
+    }));
+
+    chartTrend = new Chart(document.getElementById('grafTrendDapatan'), {
+      type: 'line',
+      data: { labels: tahunAudit.map(String), datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, usePointStyle: true } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} dapatan` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#374151' } },
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1, font: { size: 11 }, color: '#6b7280' },
+            grid: { color: '#f0f0f0' },
+            title: { display: true, text: 'Jumlah Dapatan', font: { size: 11 }, color: '#6b7280' }
+          }
+        }
+      }
+    });
+  }
+
+  function lukisGrafDapatanUnit(tahunTapis) {
+    if (chartDapatanUnit) { chartDapatanUnit.destroy(); chartDapatanUnit = null; }
+
+    const dataMajor = [], dataMinor = [], dataOfi = [];
+    dataAudit.forEach(unit => {
+      let m = 0, mi = 0, o = 0;
+      unit.rekod.forEach(r => {
+        if (tahunTapis === 'semua' || r.tahun === parseInt(tahunTapis)) {
+          m += r.major; mi += r.minor; o += r.ofi;
+        }
+      });
+      dataMajor.push(m); dataMinor.push(mi); dataOfi.push(o);
+    });
+
+    chartDapatanUnit = new Chart(document.getElementById('grafDapatanUnit'), {
+      type: 'bar',
+      data: {
+        labels: unitAudit,
+        datasets: [
+          { label: 'Major', data: dataMajor, backgroundColor: 'rgba(220,38,38,0.80)',  borderColor: '#b91c1c', borderWidth: 1.5, borderRadius: 3 },
+          { label: 'Minor', data: dataMinor, backgroundColor: 'rgba(217,119,6,0.80)',  borderColor: '#b45309', borderWidth: 1.5, borderRadius: 3 },
+          { label: 'OFI',   data: dataOfi,   backgroundColor: 'rgba(37,99,235,0.75)',  borderColor: '#1d4ed8', borderWidth: 1.5, borderRadius: 3 },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, usePointStyle: true } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}` } }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 12 }, color: '#374151' } },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { stepSize: 1, font: { size: 11 }, color: '#6b7280' },
+            grid: { color: '#f0f0f0' },
+            title: { display: true, text: 'Bilangan Dapatan', font: { size: 11 }, color: '#6b7280' }
+          }
+        }
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════
+  //  EVENT LISTENER — Tab Tahun
+  // ══════════════════════════════════════════
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-aktif'));
+      btn.classList.add('tab-aktif');
+      const tahun = btn.dataset.tahun;
+      kirKPIAudit(tahun);
+      renderJadualAudit(tahun);
+      lukisGrafDapatanUnit(tahun);
+    });
+  });
+
+  // ══════════════════════════════════════════
+  //  INISIALISASI
+  // ══════════════════════════════════════════
+  kirKPIAudit('semua');
+  renderJadualAudit('semua');
+  lukisGrafTrend();
+  lukisGrafDapatanUnit('semua');
+</script>
+</body>
+</html>
